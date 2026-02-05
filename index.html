@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>縦捻転マスター</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- デザイン変数 (1分ゴルフコーチ準拠) --- */
+        :root {
+            --primary-color: #2E7D32; /* Golf Green */
+            --primary-light: #E8F5E9;
+            --accent-color: #FF8F00; /* Warm Orange */
+            --text-color: #333333;
+            --bg-color: #F9F9F9;
+            --card-bg: #FFFFFF;
+            --border-color: #DDDDDD;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* ベーススタイル */
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* アプリコンテナ */
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.05);
+        }
+
+        /* ヘッダー (白背景・下線) */
+        header {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+
+        /* カードスタイル (枠線あり・影) */
+        .card-modern {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        .card-modern:active {
+            transform: scale(0.98);
+            background-color: #F5F5F5;
+        }
+
+        /* メインボタン (単色・シャドウ) */
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: opacity 0.2s;
+        }
+        .btn-primary:active {
+            opacity: 0.9;
+            transform: translateY(1px);
+        }
+
+        /* フォーム要素 */
+        .input-modern {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .input-modern:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #fff;
+        }
+
+        /* アニメーション */
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-cup-in {
+            animation: bounceIn 3.5s ease-in-out infinite;
+            display: inline-block;
+        }
+        @keyframes bounceIn {
+            0% { transform: translateX(-40px) translateY(-20px) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            30% { transform: translateX(-20px) translateY(0) rotate(180deg); }
+            50% { transform: translateX(-10px) translateY(-10px) rotate(270deg); }
+            70% { transform: translateX(0) translateY(0) rotate(360deg); }
+            80% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.2s;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        /* スクロールバー非表示 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container" id="app">
+    <!-- ヘッダー -->
+    <header class="relative select-none">
+        <!-- タイトル（クリックでリセット） -->
+        <div onclick="app.showConfirm('最初の画面に戻りますか？', function(){ app.reset(); })" class="flex items-center justify-center cursor-pointer">
+            <div class="relative w-8 h-8 mr-2 flex items-end justify-center">
+                <i class="fas fa-flag text-yellow-500 text-xl absolute bottom-0 right-0 z-0"></i>
+                <i class="fas fa-golf-ball text-green-700 text-sm absolute bottom-0 right-1 z-10 animate-cup-in"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-wider">縦捻転マスター</h1>
+        </div>
+        
+        <!-- 使い方ボタン（右上に配置） -->
+        <button onclick="app.openHelp(event)" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-green-700 p-2" title="使い方">
+            <i class="fas fa-question-circle text-xl"></i>
+        </button>
+    </header>
+
+    <!-- コンテンツエリア -->
+    <main id="content" class="flex-grow flex flex-col items-center fade-in pb-32 w-full pt-6 px-4">
+        <!-- JavaScriptで描画 -->
+    </main>
+
+    <!-- フッター -->
+    <footer class="bg-white border-t border-gray-200 p-4 fixed bottom-0 w-full max-w-[600px] z-20">
+        <div class="flex justify-between items-center text-sm text-gray-500 mb-2 font-bold">
+            <span id="step-text">準備</span>
+            <span id="step-number">1 / 4</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div id="progress-bar" class="bg-[#2E7D32] h-2 rounded-full transition-all duration-500" style="width: 25%"></div>
+        </div>
+        <div class="flex justify-between mt-3">
+            <button id="btn-back" class="text-gray-400 hover:text-gray-600 text-base px-2 py-1 invisible font-bold" onclick="app.goBack()">
+                <i class="fas fa-arrow-left mr-1"></i> 戻る
+            </button>
+            <button id="btn-home" class="text-[#2E7D32] hover:text-green-800 text-base px-2 py-1 font-bold" onclick="app.showConfirm('最初の画面に戻りますか？', function(){ app.reset(); })">
+                最初から
+            </button>
+        </div>
+    </footer>
+</div>
+
+<!-- 使い方ヘルプモーダル -->
+<div id="help-modal" class="modal-overlay">
+    <div class="modal-content text-left">
+        <div class="flex justify-between items-center mb-4 border-b border-gray-200 pb-2">
+            <h3 class="text-lg font-bold text-[#2E7D32] flex items-center"><i class="fas fa-book-open mr-2"></i>使い方・目的</h3>
+            <button onclick="app.closeHelp()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+        </div>
+        
+        <div class="mb-6">
+            <h4 class="font-bold text-gray-700 mb-2 text-sm"><i class="fas fa-bullseye text-[#FF8F00] mr-1"></i>アプリの目的</h4>
+            <p class="text-gray-600 text-sm leading-relaxed">
+                「縦捻転 → 落下 → 左リード」の感覚を短時間で取り戻し、力を使わない再現性の高いスイングへ導く練習ナビです。
+            </p>
+        </div>
+
+        <div>
+            <h4 class="font-bold text-gray-700 mb-2 text-sm"><i class="fas fa-list-ol text-[#2E7D32] mr-1"></i>使い方</h4>
+            <ul class="text-gray-600 text-sm space-y-3 list-none pl-1">
+                <li class="flex items-start">
+                    <span class="bg-gray-100 text-gray-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 flex-shrink-0">1</span>
+                    <span><span class="font-bold text-gray-800">今の状態を選択</span><br>「体が硬い」「打ち急ぎ」などその日の調子を選びます。</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="bg-gray-100 text-gray-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 flex-shrink-0">2</span>
+                    <span><span class="font-bold text-gray-800">使用シーンを選択</span><br>「家」「練習場」「ラウンド前」など場面を選びます。</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="bg-gray-100 text-gray-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 flex-shrink-0">3</span>
+                    <span><span class="font-bold text-gray-800">メニューを実践</span><br>表示された意識ポイントやドリルを行います。</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="bg-gray-100 text-gray-600 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mr-2 mt-0.5 flex-shrink-0">4</span>
+                    <span><span class="font-bold text-gray-800">メモ＆保存</span><br>練習の気づきを記録し、次回に活かします。</span>
+                </li>
+            </ul>
+        </div>
+
+        <button onclick="app.closeHelp()" class="w-full bg-[#2E7D32] text-white py-3 mt-6 rounded-lg font-bold shadow-md hover:bg-green-700 transition">閉じる</button>
+    </div>
+</div>
+
+<!-- カスタムモーダル (アラート/確認用) -->
+<div id="custom-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div id="modal-icon" class="text-5xl mb-4 text-[#2E7D32]">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <p id="modal-message" class="text-lg font-bold text-gray-800 mb-8">メッセージ</p>
+        <div class="flex gap-3 justify-center" id="modal-buttons"></div>
+    </div>
+</div>
+
+<script>
+    const GOLF_DATA = {
+        conditions: [
+            { id: 'stiff', label: '体が硬い・回らない', icon: 'fa-user-injured', color: 'text-[#FF8F00]', bg: 'bg-orange-50' },
+            { id: 'rush', label: '打ち急ぎ・力みがある', icon: 'fa-bolt', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+            { id: 'good', label: '調子は悪くない', icon: 'fa-smile', color: 'text-[#2E7D32]', bg: 'bg-green-50' }
+        ],
+        scenes: [
+            { id: 'home', label: 'おうちで', icon: 'fa-home', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { id: 'range', label: '練習場で', icon: 'fa-layer-group', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            { id: 'round', label: 'ラウンド直前', icon: 'fa-flag', color: 'text-red-600', bg: 'bg-red-50' }
+        ],
+        places: [
+            { value: '家', label: '家' },
+            { value: '通勤中', label: '通勤中' },
+            { value: '練習場', label: '練習場' },
+            { value: 'ゴルフ場', label: 'ゴルフ場' },
+            { value: 'other', label: 'その他' }
+        ],
+        tags: [
+            { id: 'all', label: '全体' },
+            { id: 'driver', label: '1W' },
+            { id: 'iron', label: 'アイアン' },
+            { id: 'wedge', label: 'アプローチ' },
+            { id: 'putter', label: 'パター' }
+        ],
+        contents: {
+            'stiff-home': {
+                quote: 'クラブを持たずに、背伸びをするだけで十分です。',
+                focus: '背骨を軸に、右肩を高く、左肩を低く入れ替えるだけ。',
+                drop: '脱力して、腕の重さだけでブラ〜ンと落とす。',
+                lead: '左のお尻を、後ろの壁にコンと当てるイメージ。',
+                ng: '無理にねじり上げようとして、息を止めること。',
+                check: ['深呼吸しながらバックスイング', 'トップで3秒止まって脱力', 'スローモーションで素振り']
+            },
+            'stiff-range': {
+                quote: '飛ばそうとしなくて大丈夫。ミート率だけ考えましょう。',
+                focus: 'トップの位置は「手が耳の横」くらいでOK。',
+                drop: 'クラブが背中側に「カトン」と落ちるのを待つ。',
+                lead: '左足のかかとで地面をグッと踏むだけ。',
+                ng: '手首の力でボールを叩きにいくこと。',
+                check: ['ハーフスイングで芯に当てる', 'フィニッシュで3秒止まる', '目をつぶって素振り']
+            },
+            'stiff-round': {
+                quote: '今日の主役は「重力」です。あなたは支えるだけ。',
+                focus: 'バックスイングで右の股関節にシワを作る。',
+                drop: '切り返しで「間（ま）」を作る。ワン、ツー。',
+                lead: 'おへそを目標に向けるだけでスイング完了。',
+                ng: '「当てよう」としてボールを凝視しすぎること。',
+                check: ['素振りで芝をシュッと擦る', '空を見て深呼吸', '6割の力で振る']
+            },
+            'rush-home': {
+                quote: 'スイングはダンスです。リズムを整えましょう。',
+                focus: 'イチ、ニ、のサーン。声を出しながら。',
+                drop: 'トップでクラブが「無重力」になる瞬間を感じて。',
+                lead: '腕ではなく、左膝が動き出しの合図。',
+                ng: 'トップから急激に加速しようとすること。',
+                check: ['連続素振りでリズム確認', '鏡を見ながら頭の位置キープ', '柔らかいグリップで振る']
+            },
+            'rush-range': {
+                quote: 'ボールは逃げません。ゆっくり上げて、ゆっくり下ろす。',
+                focus: '右足の前でクラブが「ストン」と落ちる音を聞く。',
+                drop: '手元が腰の高さに来るまで、何もしない感覚。',
+                lead: '左サイドがドアを開けるように、道を空ける。',
+                ng: '上半身から切り返すこと（突っ込みNG）。',
+                check: ['ウェッジで50ヤードを打つ感覚で', 'トップで一度完全に静止して打つ', '高い球をイメージする']
+            },
+            'rush-round': {
+                quote: '自分史上、もっともゆったりしたスイングで。',
+                focus: 'クラブヘッドの重さを、指先で感じ続ける。',
+                drop: '重力に任せれば、クラブは勝手に正しい軌道を通ります。',
+                lead: '左への回転だけでボールを運ぶイメージ。',
+                ng: '「飛ばしたい！」という欲を持つこと。',
+                check: ['フィニッシュまで一息で振り切る', 'ターゲットより右を向いて打つ', 'グリップをゆるゆるにする']
+            },
+             'good-home': {
+                quote: '良い感覚を脳に焼き付けましょう。反復が鍵です。',
+                focus: '縦に上げて、縦に下ろす。シンプルな円運動。',
+                drop: 'クラブが体に巻き付くような柔らかさを確認。',
+                lead: '左サイドのリードで、手が勝手についてくる。',
+                ng: '新しい動きを急に取り入れようとすること。',
+                check: ['目を閉じて理想のスイングを想像', 'いつものリズムで素振り10回', 'フィニッシュのバランス確認']
+            },
+            'good-range': {
+                quote: '気持ちよく振れている時こそ、基本の「縦」を意識。',
+                focus: '右肩が下がりすぎないよう、縦回転をキープ。',
+                drop: '自然落下を邪魔しない。',
+                lead: 'インパクト以降、左肘をたたんでいく。',
+                ng: '調子に乗ってマン振りすること。怪我のもとです。',
+                check: ['得意な番手でリズム良く', 'アプローチで距離感を揃える', '真っ直ぐな弾道を目に焼き付ける']
+            },
+             'good-round': {
+                quote: '今日は楽しむ日です。結果は後からついてきます。',
+                focus: 'ターゲットだけを見て、無心で振る。',
+                drop: 'トップでの「間」だけ忘れずに。',
+                lead: 'スムーズな回転でフィニッシュまで。',
+                ng: 'スイングの細かい形を気にすること。',
+                check: ['素振りは1回だけ', '笑顔でアドレスに入る', 'グッドショットの余韻を味わう']
+            }
+        },
+        default: {
+            quote: '力を抜けば、クラブは仕事をします。',
+            focus: '右向け右、左向け左。',
+            drop: '重力に任せる。',
+            lead: '回転で打つ。',
+            ng: '力むこと。',
+            check: ['素振り', '深呼吸', 'リズム']
+        }
+    };
+
+    const app = {
+        step: 1,
+        state: { condition: null, scene: null, selectedTag: null, editingIndex: null },
+        
+        init: function() { this.renderStep1(); this.loadHistory(); },
+
+        // モーダル
+        modalCallback: null,
+        showAlert: function(message) { this.showModal(message, 'alert', null); },
+        showConfirm: function(message, callback) { this.showModal(message, 'confirm', callback); },
+        showModal: function(message, type, callback) {
+            const modal = document.getElementById('custom-modal');
+            const msgEl = document.getElementById('modal-message');
+            const iconEl = document.getElementById('modal-icon');
+            const btnsEl = document.getElementById('modal-buttons');
+            msgEl.textContent = message;
+            this.modalCallback = callback;
+            if (type === 'alert') {
+                iconEl.innerHTML = '<i class="fas fa-check-circle text-[#2E7D32]"></i>';
+                btnsEl.innerHTML = `<button onclick="app.closeModal()" class="w-full bg-[#2E7D32] text-white py-3 px-8 rounded-lg font-bold shadow-md hover:bg-green-700 transition">OK</button>`;
+            } else {
+                iconEl.innerHTML = '<i class="fas fa-question-circle text-[#FF8F00]"></i>';
+                btnsEl.innerHTML = `
+                    <button onclick="app.closeModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-bold hover:bg-gray-300 transition">キャンセル</button>
+                    <button onclick="app.confirmModal()" class="flex-1 bg-[#2E7D32] text-white py-3 px-4 rounded-lg font-bold shadow-md hover:bg-green-700 transition">OK</button>
+                `;
+            }
+            modal.classList.add('active');
+        },
+        closeModal: function() { document.getElementById('custom-modal').classList.remove('active'); this.modalCallback = null; },
+        confirmModal: function() { if (this.modalCallback) { this.modalCallback(); } this.closeModal(); },
+
+        // ヘルプモーダル
+        openHelp: function(event) {
+            if(event) event.stopPropagation();
+            document.getElementById('help-modal').classList.add('active');
+        },
+        closeHelp: function() {
+            document.getElementById('help-modal').classList.remove('active');
+        },
+
+        // ナビゲーション
+        updateProgress: function(step, text) {
+            this.step = step;
+            document.getElementById('progress-bar').style.width = `${step * 25}%`;
+            document.getElementById('step-text').textContent = text;
+            document.getElementById('step-number').textContent = `${step} / 4`;
+            const backBtn = document.getElementById('btn-back');
+            step > 1 ? backBtn.classList.remove('invisible') : backBtn.classList.add('invisible');
+        },
+        goBack: function() {
+            if (this.step === 2) this.renderStep1();
+            if (this.step === 3) this.renderStep2();
+            if (this.step === 4) {
+                if (this.state.editingIndex !== null) { this.cancelEdit(); this.renderStep3(); }
+                else { this.renderStep3(); }
+            }
+        },
+        reset: function() {
+            this.state = { condition: null, scene: null, selectedTag: null, editingIndex: null };
+            this.renderStep1();
+            window.scrollTo(0, 0);
+        },
+
+        // レンダリング
+        renderStep1: function() {
+            this.updateProgress(1, '今の状態は？');
+            const hour = new Date().getHours();
+            let greeting = 'こんにちは';
+            if (hour >= 4 && hour < 11) greeting = 'おはようございます';
+            else if (hour >= 18 || hour < 4) greeting = 'こんばんは';
+
+            const history = JSON.parse(localStorage.getItem('golfHistory') || '[]');
+            const historyHtml = history.slice(0, 3).map((h, index) => {
+                const tagLabel = GOLF_DATA.tags.find(t => t.id === h.tag)?.label || '全体';
+                return `
+                <div class="card-modern p-4 mb-3 relative group hover:bg-gray-50 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="font-bold text-[#2E7D32] bg-green-50 px-2 py-1 rounded-md border border-green-100"><i class="far fa-clock mr-1"></i>${h.dateDisplay}</span>
+                            <span class="text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">${h.place}</span>
+                            <span class="text-[#2E7D32] border border-[#2E7D32] px-2 py-1 rounded-md bg-white">${tagLabel}</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="event.stopPropagation(); app.editNote(${index}, event)" class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-[#2E7D32] transition flex items-center justify-center">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.deleteNote(${index}, event)" class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 transition flex items-center justify-center">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-gray-700 text-base leading-relaxed pl-3 border-l-4 border-[#2E7D32]">${h.note}</div>
+                </div>
+            `}).join('');
+
+            const historySection = history.length > 0 ? `
+                <div class="w-full mt-8 mb-4 fade-in delay-100">
+                    <h3 class="text-gray-500 font-bold text-sm mb-3 ml-1 border-b-2 border-[#2E7D32] inline-block pb-1">
+                        <i class="fas fa-history mr-1"></i> 前回の気づき
+                    </h3>
+                    ${historyHtml}
+                </div>
+            ` : '';
+
+            const html = `
+                <div class="text-center w-full max-w-[600px] fade-in">
+                    <h2 class="text-2xl font-bold text-[#2E7D32] mb-2">${greeting}</h2>
+                    <p class="text-gray-600 mb-8 font-medium">今日の身体の調子はいかがですか？</p>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        ${GOLF_DATA.conditions.map(item => `
+                            <button onclick="app.selectCondition('${item.id}')" 
+                                class="card-modern w-full p-6 text-left flex items-center group cursor-pointer hover:border-[#2E7D32] transition-colors">
+                                <div class="${item.bg} ${item.color} w-14 h-14 rounded-full flex items-center justify-center text-2xl mr-5 flex-shrink-0">
+                                    <i class="fas ${item.icon}"></i>
+                                </div>
+                                <div class="flex-grow">
+                                    <h3 class="text-lg font-bold text-gray-800 group-hover:text-[#2E7D32] transition-colors">${item.label}</h3>
+                                </div>
+                                <i class="fas fa-chevron-right ml-2 text-gray-300 group-hover:text-[#2E7D32] transition-colors"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                    ${historySection}
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+        },
+
+        selectCondition: function(id) { this.state.condition = id; this.renderStep2(); },
+
+        renderStep2: function() {
+            this.updateProgress(2, 'これからの場面');
+            const html = `
+                <div class="text-center w-full max-w-[600px] fade-in">
+                    <h2 class="text-2xl font-bold text-[#2E7D32] mb-2">練習の場所は？</h2>
+                    <p class="text-gray-600 mb-8 font-medium">場面に合わせたメニューを作ります</p>
+                    
+                    <div class="grid grid-cols-1 gap-4">
+                        ${GOLF_DATA.scenes.map(item => `
+                            <button onclick="app.selectScene('${item.id}')" 
+                                class="card-modern w-full p-6 text-left flex items-center group cursor-pointer hover:border-[#2E7D32] transition-colors">
+                                <div class="${item.bg} ${item.color} w-14 h-14 rounded-full flex items-center justify-center text-2xl mr-5 flex-shrink-0">
+                                    <i class="fas ${item.icon}"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-800 group-hover:text-[#2E7D32] transition-colors">${item.label}</h3>
+                                </div>
+                                <i class="fas fa-chevron-right ml-auto text-gray-300 group-hover:text-[#2E7D32] transition-colors"></i>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+        },
+
+        selectScene: function(id) { this.state.scene = id; this.renderStep3(); },
+
+        renderStep3: function() {
+            this.updateProgress(3, '本日のメニュー');
+            const key = `${this.state.condition}-${this.state.scene}`;
+            const data = GOLF_DATA.contents[key] || GOLF_DATA.contents['stiff-home']; 
+
+            const html = `
+                <div class="w-full max-w-[600px] fade-in">
+                    <!-- 今日の一言 -->
+                    <div class="card-modern p-6 mb-6 border-t-4 border-[#FF8F00] relative overflow-hidden bg-white">
+                        <div class="absolute -top-4 -right-4 text-gray-100 text-9xl transform rotate-12 -z-10">
+                            <i class="fas fa-quote-right"></i>
+                        </div>
+                        <p class="text-xs font-bold text-[#FF8F00] mb-2 uppercase tracking-widest">Today's Advice</p>
+                        <p class="text-xl font-bold leading-relaxed text-gray-800">「${data.quote}」</p>
+                    </div>
+
+                    <!-- 3つの柱 -->
+                    <div class="grid gap-4 mb-8">
+                        <div class="card-modern p-5 border-l-4 border-orange-400">
+                            <h4 class="text-orange-600 font-bold text-xs mb-1 uppercase tracking-wider"><i class="fas fa-sync-alt mr-2"></i>縦捻転の意識</h4>
+                            <p class="text-lg font-bold text-gray-800">${data.focus}</p>
+                        </div>
+                        <div class="card-modern p-5 border-l-4 border-blue-400">
+                            <h4 class="text-blue-600 font-bold text-xs mb-1 uppercase tracking-wider"><i class="fas fa-arrow-down mr-2"></i>落下の合図</h4>
+                            <p class="text-lg font-bold text-gray-800">${data.drop}</p>
+                        </div>
+                        <div class="card-modern p-5 border-l-4 border-green-600">
+                            <h4 class="text-[#2E7D32] font-bold text-xs mb-1 uppercase tracking-wider"><i class="fas fa-share mr-2"></i>左リードの結果</h4>
+                            <p class="text-lg font-bold text-gray-800">${data.lead}</p>
+                        </div>
+                    </div>
+
+                    <!-- NG -->
+                    <div class="bg-red-50 rounded-lg p-5 mb-8 border border-red-100 text-red-800">
+                        <h4 class="font-bold mb-2 flex items-center text-red-600"><i class="fas fa-ban mr-2"></i>今日はやらない（NG）</h4>
+                        <p class="font-medium">${data.ng}</p>
+                    </div>
+
+                    <div class="card-modern p-6 mb-8">
+                        <h3 class="text-lg font-bold text-[#2E7D32] mb-4 border-b border-gray-100 pb-3">3球チェックメニュー</h3>
+                        <ul class="space-y-4">
+                            ${data.check.map((item, index) => `
+                                <li class="flex items-center">
+                                    <span class="bg-[#2E7D32] text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-sm mr-3 flex-shrink-0">${index + 1}</span>
+                                    <span class="text-gray-700 font-medium">${item}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+
+                    <button onclick="app.renderStep4()" 
+                        class="btn-primary w-full text-white font-bold text-lg py-4 shadow-lg mb-4">
+                        <i class="fas fa-check-circle mr-2"></i>練習を終えてメモへ
+                    </button>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            window.scrollTo(0, 0);
+        },
+
+        renderStep4: function() {
+            this.updateProgress(4, '気づきメモ');
+            
+            let noteValue = '', dateValue = new Date().toISOString().split('T')[0], placeValue = '', tagValue = 'all', otherPlaceValue = '';
+            const isEditing = this.state.editingIndex !== null;
+            const history = JSON.parse(localStorage.getItem('golfHistory') || '[]');
+
+            if (isEditing) {
+                const target = history[this.state.editingIndex];
+                if (target) {
+                    noteValue = target.note;
+                    dateValue = target.dateRaw || dateValue; 
+                    tagValue = target.tag || 'all';
+                    const isKnownPlace = GOLF_DATA.places.some(p => p.value === target.place && p.value !== 'other');
+                    if (isKnownPlace) { placeValue = target.place; } 
+                    else { placeValue = 'other'; otherPlaceValue = target.place; }
+                }
+                this.state.selectedTag = tagValue;
+            } else {
+                if (!this.state.selectedTag) this.state.selectedTag = 'all';
+            }
+
+            const historyHtml = history.slice(0, 3).map((h, index) => {
+                const tagLabel = GOLF_DATA.tags.find(t => t.id === h.tag)?.label || '全体';
+                const activeClass = (this.state.editingIndex === index) ? 'border-[#2E7D32] bg-green-50' : '';
+                return `
+                <div class="card-modern p-4 mb-3 relative group ${activeClass}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-xs text-gray-500 flex items-center gap-2">
+                            <span class="font-bold text-[#2E7D32]"><i class="far fa-clock mr-1"></i>${h.dateDisplay}</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded-md text-gray-600">${h.place}</span>
+                            <span class="text-[#2E7D32] border border-green-100 px-2 py-1 rounded-md bg-white">${tagLabel}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="event.stopPropagation(); app.editNote(${index}, event)" class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-[#2E7D32] transition flex items-center justify-center">
+                                <i class="fas fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.deleteNote(${index}, event)" class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-500 transition flex items-center justify-center">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-gray-700 text-base leading-relaxed pl-3 border-l-4 border-gray-200">${h.note}</div>
+                </div>
+            `}).join('');
+
+            const emptyHistoryHtml = `
+                <div class="text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
+                    <i class="fas fa-pen-fancy text-3xl mb-3 opacity-30"></i>
+                    <p class="text-sm font-medium">まだ記録がありません。<br>今日の気づきを書いてみましょう。</p>
+                </div>
+            `;
+
+            const saveBtnLabel = isEditing ? '更新 & コピー' : '保存 & コピー';
+            const saveBtnIcon = isEditing ? 'fa-sync-alt' : 'fa-paper-plane';
+
+            const html = `
+                <div class="w-full max-w-[600px] fade-in">
+                    
+                    <div class="mb-6">
+                         <div class="flex items-center justify-between mb-4 px-1">
+                            <h3 class="text-gray-500 font-bold text-sm border-b-2 border-[#2E7D32] pb-1">
+                                <i class="fas fa-history mr-1"></i> 過去のログ
+                            </h3>
+                            <span class="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded-md">最新3件</span>
+                        </div>
+                        <div class="space-y-1">
+                            ${history.length > 0 ? historyHtml : emptyHistoryHtml}
+                        </div>
+                    </div>
+
+                    <div class="card-modern p-5 relative z-10 ${isEditing ? 'border-[#2E7D32]' : ''}">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 text-sm text-[#2E7D32] font-bold">
+                                <i class="fas ${isEditing ? 'fa-pen' : 'fa-edit'}"></i> ${isEditing ? '編集中' : '今日の気づき'}
+                            </div>
+                            ${isEditing ? `<button onclick="app.cancelEdit()" class="text-xs text-gray-600 bg-gray-100 px-3 py-1 rounded-md font-bold hover:bg-gray-200 transition">キャンセル</button>` : ''}
+                        </div>
+
+                        <div class="space-y-3 mb-4">
+                            <div class="flex items-center gap-2">
+                                <input type="date" id="date-input" value="${dateValue}" class="input-modern text-sm">
+                                <select id="place-select" class="flex-grow input-modern text-sm" onchange="app.toggleOtherPlaceInput(this.value)">
+                                    <option value="" disabled ${!placeValue ? 'selected' : ''}>場所を選択</option>
+                                    ${GOLF_DATA.places.map(p => `<option value="${p.value}" ${p.value === placeValue ? 'selected' : ''}>${p.label}</option>`).join('')}
+                                </select>
+                            </div>
+                            <input type="text" id="place-other-input" value="${otherPlaceValue}" class="input-modern w-full text-sm ${placeValue === 'other' ? '' : 'hidden'}" placeholder="場所を入力">
+
+                            <div class="flex flex-wrap gap-2" id="tag-container">
+                                ${GOLF_DATA.tags.map(tag => `
+                                    <button onclick="app.selectTag('${tag.id}')" 
+                                        class="tag-btn ${tag.id === this.state.selectedTag ? 'active' : ''}" 
+                                        id="tag-${tag.id}">
+                                        ${tag.label}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="relative">
+                            <textarea id="note-input" class="input-modern" rows="3" placeholder="ここに入力...（例：力を抜いたら球が伸びた）">${noteValue}</textarea>
+                            <button onclick="app.saveNote()" 
+                                class="absolute bottom-3 right-3 bg-[#2E7D32] text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:bg-green-700 transition-all transform active:scale-95" title="${saveBtnLabel}">
+                                <i class="fas ${saveBtnIcon}"></i>
+                            </button>
+                        </div>
+                        <p class="text-right text-xs text-gray-400 mt-2 mr-1 font-medium"><i class="fas fa-check mr-1"></i>${saveBtnLabel}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            if (isEditing) window.scrollTo(0, document.body.scrollHeight);
+            else window.scrollTo(0, 0);
+        },
+
+        selectTag: function(tagId) {
+            this.state.selectedTag = tagId;
+            document.querySelectorAll('.tag-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tag-${tagId}`).classList.add('active');
+        },
+        toggleOtherPlaceInput: function(value) {
+            const otherInput = document.getElementById('place-other-input');
+            value === 'other' ? otherInput.classList.remove('hidden') : otherInput.classList.add('hidden');
+        },
+        editNote: function(index, event) {
+            if (event) event.stopPropagation();
+            this.state.editingIndex = index;
+            this.step = 4;
+            this.renderStep4();
+        },
+        cancelEdit: function() { this.state.editingIndex = null; this.state.selectedTag = null; this.renderStep4(); },
+        saveNote: function() {
+            const dateInput = document.getElementById('date-input').value;
+            const placeSelect = document.getElementById('place-select');
+            let placeValue = placeSelect.value;
+            const noteInput = document.getElementById('note-input').value.trim();
+            const tagId = this.state.selectedTag || 'all';
+            if (placeValue === 'other') placeValue = document.getElementById('place-other-input').value.trim();
+
+            if (!noteInput) { this.showAlert('気づきが一言あると、次回につながります！'); return; }
+            if (!placeValue) placeValue = '場所指定なし';
+
+            const dateObj = new Date(dateInput);
+            const dateDisplay = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+            const tagName = GOLF_DATA.tags.find(t => t.id === tagId)?.label || '';
+            const entry = {
+                dateRaw: dateInput, dateDisplay: dateDisplay, place: placeValue, tag: tagId, note: noteInput, condition: this.state.condition
+            };
+
+            const history = JSON.parse(localStorage.getItem('golfHistory') || '[]');
+            if (this.state.editingIndex !== null) {
+                if (history[this.state.editingIndex]) history[this.state.editingIndex] = entry;
+                this.state.editingIndex = null;
+            } else {
+                history.unshift(entry);
+            }
+            localStorage.setItem('golfHistory', JSON.stringify(history));
+
+            const copyText = `【縦捻転マスター】 ${dateDisplay}\n場所: ${placeValue}\nテーマ: ${tagName}\nメモ: ${noteInput}`;
+            navigator.clipboard.writeText(copyText).then(() => { this.showAlert('保存＆コピーしました！'); })
+                                                   .catch(() => { this.showAlert('保存しました！'); });
+            this.renderStep4();
+        },
+        deleteNote: function(index, event) {
+            if (event) event.stopPropagation();
+            this.showConfirm('このメモを削除しますか？', () => {
+                const idx = Number(index);
+                const history = JSON.parse(localStorage.getItem('golfHistory') || '[]');
+                if (idx >= 0 && idx < history.length) {
+                    history.splice(idx, 1);
+                    localStorage.setItem('golfHistory', JSON.stringify(history));
+                    if (this.state.editingIndex === idx) this.state.editingIndex = null;
+                    else if (this.state.editingIndex > idx) this.state.editingIndex--;
+                    
+                    this.step === 1 ? this.renderStep1() : this.renderStep4();
+                }
+            });
+        },
+        loadHistory: function() {
+            if (!localStorage.getItem('golfHistory')) localStorage.setItem('golfHistory', JSON.stringify([]));
+        }
+    };
+    window.app = app;
+    app.init();
+</script>
+</body>
+</html>
